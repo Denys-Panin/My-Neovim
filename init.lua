@@ -36,6 +36,8 @@ require('lazy').setup {
   require 'plugins.session',
   require 'plugins.conform',
   require 'plugins.noice',
+  require 'plugins.nvim-surround',
+  require 'plugins.lorem'
 }
 
 local default_theme = "carbonfox" -- here change any theme you want 

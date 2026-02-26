@@ -1,6 +1,11 @@
 
 # 📘 Neovim Configuration Documentation
 
+## = Plugins GitHub repositories
+= `https://github.com/derektata/lorem.nvim`: Lorem plugin
+
+
+
 ## ⌨️ Keymaps
 - `space` : leader key
 
