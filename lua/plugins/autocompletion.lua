@@ -22,6 +22,7 @@ return { -- Autocompletion
     'hrsh7th/cmp-nvim-lsp',
     'hrsh7th/cmp-buffer',
     'hrsh7th/cmp-path',
+    'kristijanhusak/vim-dadbod-completion',
   },
   config = function()
     local cmp = require 'cmp'
@@ -80,6 +81,7 @@ return { -- Autocompletion
         { name = 'luasnip' },
         { name = 'buffer' },
         { name = 'path' },
+        { name = 'vim-dadbod-completion' },
       }),
       formatting = {
         fields = { 'kind', 'abbr', 'menu' },
@@ -90,6 +92,7 @@ return { -- Autocompletion
             luasnip = '[Snippet]',
             buffer = '[Buffer]',
             path = '[Path]',
+            ['vim-dadbod-completion'] = '[DB]',
           })[entry.source.name]
           return vim_item
         end,
