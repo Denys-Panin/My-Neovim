@@ -76,6 +76,7 @@ return {
       intelephense = {},
       ts_ls = {},
       pyright = {},
+      clangd = {},
       html = { filetypes = { 'html', 'twig', 'hbs', 'blade' } },
       cssls = {},
       tailwindcss = {},
@@ -98,7 +99,7 @@ return {
     }
 
     local ensure_installed = {
-      'intelephense', 'ts_ls', 'pyright', 'html', 'cssls',
+      'intelephense', 'ts_ls', 'pyright', 'clangd', 'html', 'cssls',
       'tailwindcss', 'dockerls', 'sqlls', 'terraformls', 'jsonls', 'yamlls',
       'lua_ls', 'stylua', 'blade-formatter', 'php-cs-fixer', 'phpstan',
     }

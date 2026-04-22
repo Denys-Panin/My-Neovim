@@ -203,3 +203,14 @@ vim.keymap.set("n", "<leader>ff", function()
     async = false,
   })
 end, { desc = "Format file" })
+
+-- For C
+vim.keymap.set('n', '<leader>mc', function()
+  vim.cmd('write')
+  vim.cmd('split | terminal clang % -o %< && ./%<')
+end, { desc = 'Compile and run C file' })
+
+vim.keymap.set('n', '<leader>mb', function()
+  vim.cmd('write')
+  vim.cmd('split | terminal clang % -o %<')
+end, { desc = 'Build C file' })
