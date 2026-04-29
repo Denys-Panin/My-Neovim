@@ -1,4 +1,5 @@
 require 'core.options' -- Load general options
+require("core.python").setup()
 require 'core.keymaps' -- Load general keymaps
 require 'core.snippets' -- Custom code snippets
 
