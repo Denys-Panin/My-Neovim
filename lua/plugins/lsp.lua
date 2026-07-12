@@ -6,24 +6,32 @@ return {
     'WhoIsSethDaniel/mason-tool-installer.nvim',
     { 'j-hui/fidget.nvim', opts = {} },
     'hrsh7th/cmp-nvim-lsp',
-    'nvimtools/none-ls.nvim',
+    'b0o/SchemaStore.nvim',
   },
+
   config = function()
-    vim.filetype.add({
+    vim.filetype.add {
+      extension = {
+        tf = 'terraform',
+        tfvars = 'terraform-vars',
+      },
       pattern = {
         ['.*%.blade%.php'] = 'blade',
       },
-    })
+    }
 
     vim.api.nvim_create_autocmd('LspAttach', {
       group = vim.api.nvim_create_augroup('kickstart-lsp-attach', { clear = true }),
       callback = function(event)
         local map = function(keys, func, desc, mode)
           mode = mode or 'n'
-          vim.keymap.set(mode, keys, func, { buffer = event.buf, desc = 'LSP: ' .. desc })
+          vim.keymap.set(mode, keys, func, {
+            buffer = event.buf,
+            desc = 'LSP: ' .. desc,
+          })
         end
 
-        local builtin = require('telescope.builtin')
+        local builtin = require 'telescope.builtin'
 
         map('gd', builtin.lsp_definitions, '[G]oto [D]efinition')
         map('gr', builtin.lsp_references, '[G]oto [R]eferences')
@@ -35,7 +43,12 @@ return {
         map('<leader>ca', vim.lsp.buf.code_action, '[C]ode [A]ction', { 'n', 'x' })
         map('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
 
+        map('<leader>fp', function()
+          vim.lsp.buf.format { bufnr = event.buf }
+        end, '[F]ormat File')
+
         local client = vim.lsp.get_client_by_id(event.data.client_id)
+
         if client and client.supports_method(vim.lsp.protocol.Methods.textDocument_documentHighlight) then
           local highlight_augroup = vim.api.nvim_create_augroup('kickstart-lsp-highlight', { clear = false })
 
@@ -50,14 +63,6 @@ return {
             group = highlight_augroup,
             callback = vim.lsp.buf.clear_references,
           })
-
-          vim.api.nvim_create_autocmd('LspDetach', {
-            group = vim.api.nvim_create_augroup('kickstart-lsp-detach', { clear = true }),
-            callback = function(event2)
-              vim.lsp.buf.clear_references()
-              vim.api.nvim_clear_autocmds { group = 'kickstart-lsp-highlight', buffer = event2.buf }
-            end,
-          })
         end
 
         if client and client.supports_method(vim.lsp.protocol.Methods.textDocument_inlayHint) then
@@ -68,71 +73,123 @@ return {
       end,
     })
 
-    local capabilities = vim.tbl_deep_extend('force', {},
-      vim.lsp.protocol.make_client_capabilities(),
-      require('cmp_nvim_lsp').default_capabilities())
+    local capabilities = vim.tbl_deep_extend('force', {}, vim.lsp.protocol.make_client_capabilities(), require('cmp_nvim_lsp').default_capabilities())
 
     local servers = {
       intelephense = {},
       ts_ls = {},
       pyright = {},
       clangd = {},
-      html = { filetypes = { 'html', 'twig', 'hbs', 'blade' } },
+
+      html = {
+        filetypes = { 'html', 'twig', 'hbs', 'blade' },
+      },
+
       cssls = {},
       tailwindcss = {},
+
+      -- DevOps
       dockerls = {},
-      sqlls = {},
-      terraformls = {},
+      docker_compose_language_service = {},
+      terraformls = {
+        filetypes = { 'terraform', 'terraform-vars' },
+      },
+      bashls = {},
+      ansiblels = {},
       jsonls = {},
-      yamlls = {},
+
+      yamlls = {
+        settings = {
+          yaml = {
+            schemaStore = {
+              enable = false,
+              url = '',
+            },
+            schemas = require('schemastore').yaml.schemas(),
+            validate = true,
+            completion = true,
+            hover = true,
+          },
+        },
+      },
+
+      sqlls = {},
+      marksman = {},
+
       lua_ls = {
         settings = {
           Lua = {
-            completion = { callSnippet = 'Replace' },
-            runtime = { version = 'LuaJIT' },
-            workspace = { checkThirdParty = false, library = { '${3rd}/luv/library', unpack(vim.api.nvim_get_runtime_file('', true)) } },
-            diagnostics = { disable = { 'missing-fields' } },
-            format = { enable = false },
+            completion = {
+              callSnippet = 'Replace',
+            },
+            runtime = {
+              version = 'LuaJIT',
+            },
+            workspace = {
+              checkThirdParty = false,
+              library = {
+                '${3rd}/luv/library',
+                unpack(vim.api.nvim_get_runtime_file('', true)),
+              },
+            },
+            diagnostics = {
+              disable = { 'missing-fields' },
+            },
+            format = {
+              enable = false,
+            },
           },
         },
       },
     }
 
     local ensure_installed = {
-      'intelephense', 'ts_ls', 'pyright', 'clangd', 'html', 'cssls',
-      'tailwindcss', 'dockerls', 'sqlls', 'terraformls', 'jsonls', 'yamlls',
-      'lua_ls', 'stylua', 'blade-formatter', 'php-cs-fixer', 'phpstan',
+      -- LSP
+      'intelephense',
+      'ts_ls',
+      'pyright',
+      'clangd',
+      'html',
+      'cssls',
+      'tailwindcss',
+      'dockerls',
+      'docker_compose_language_service',
+      'terraformls',
+      'bashls',
+      'ansiblels',
+      'jsonls',
+      'yamlls',
+      'sqlls',
+      'marksman',
+      'lua_ls',
+
+      -- Formatters / linters
+      'stylua',
+      'blade-formatter',
+      'php-cs-fixer',
+      'phpstan',
+      'shellcheck',
+      'shfmt',
+      'tflint',
+      'prettier',
+      'ruff',
+      'yamllint',
     }
 
-    require('mason-tool-installer').setup { ensure_installed = ensure_installed }
+    require('mason-tool-installer').setup {
+      ensure_installed = ensure_installed,
+    }
 
     require('mason-lspconfig').setup {
       handlers = {
         function(server_name)
           local server = servers[server_name] or {}
+
           server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
+
           require('lspconfig')[server_name].setup(server)
         end,
       },
     }
-
-    local null_ls = require("null-ls")
-    null_ls.setup({
-      sources = {
-        null_ls.builtins.formatting.black,
-        null_ls.builtins.formatting.isort,
-        null_ls.builtins.formatting.djlint.with({
-          extra_args = { "--profile=django" }
-        }),
-      },
-      on_attach = function(client, bufnr)
-        if client.supports_method("textDocument/formatting") then
-          vim.keymap.set("n", "<leader>fp", function()
-            vim.lsp.buf.format({ bufnr = bufnr })
-          end, { buffer = bufnr, desc = "Format file" })
-        end
-      end,
-    })
   end,
 }
-

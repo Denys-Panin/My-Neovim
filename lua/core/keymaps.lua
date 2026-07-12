@@ -214,3 +214,7 @@ vim.keymap.set('n', '<leader>mb', function()
   vim.cmd('write')
   vim.cmd('split | terminal clang % -o %<')
 end, { desc = 'Build C file' })
+
+vim.keymap.set('i', '<C-k>', vim.lsp.buf.signature_help, {
+  desc = 'Show signature help',
+})
