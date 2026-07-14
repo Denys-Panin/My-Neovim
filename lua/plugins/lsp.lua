@@ -1,5 +1,6 @@
 return {
   'neovim/nvim-lspconfig',
+
   dependencies = {
     { 'williamboman/mason.nvim', config = true },
     'williamboman/mason-lspconfig.nvim',
@@ -15,16 +16,21 @@ return {
         tf = 'terraform',
         tfvars = 'terraform-vars',
       },
+
       pattern = {
         ['.*%.blade%.php'] = 'blade',
       },
     }
 
+    local lsp_attach_group = vim.api.nvim_create_augroup('kickstart-lsp-attach', { clear = true })
+
     vim.api.nvim_create_autocmd('LspAttach', {
-      group = vim.api.nvim_create_augroup('kickstart-lsp-attach', { clear = true }),
+      group = lsp_attach_group,
+
       callback = function(event)
         local map = function(keys, func, desc, mode)
           mode = mode or 'n'
+
           vim.keymap.set(mode, keys, func, {
             buffer = event.buf,
             desc = 'LSP: ' .. desc,
@@ -44,30 +50,52 @@ return {
         map('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
 
         map('<leader>fp', function()
-          vim.lsp.buf.format { bufnr = event.buf }
+          vim.lsp.buf.format {
+            bufnr = event.buf,
+            async = false,
+          }
         end, '[F]ormat File')
 
         local client = vim.lsp.get_client_by_id(event.data.client_id)
 
-        if client and client.supports_method(vim.lsp.protocol.Methods.textDocument_documentHighlight) then
-          local highlight_augroup = vim.api.nvim_create_augroup('kickstart-lsp-highlight', { clear = false })
+        if client and client:supports_method(vim.lsp.protocol.Methods.textDocument_documentHighlight) then
+          local highlight_group = vim.api.nvim_create_augroup('kickstart-lsp-highlight-' .. event.buf, { clear = true })
 
           vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
             buffer = event.buf,
-            group = highlight_augroup,
+            group = highlight_group,
             callback = vim.lsp.buf.document_highlight,
           })
 
           vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
             buffer = event.buf,
-            group = highlight_augroup,
+            group = highlight_group,
             callback = vim.lsp.buf.clear_references,
+          })
+
+          vim.api.nvim_create_autocmd('LspDetach', {
+            buffer = event.buf,
+            group = highlight_group,
+
+            callback = function()
+              vim.lsp.buf.clear_references()
+              vim.api.nvim_clear_autocmds {
+                group = highlight_group,
+                buffer = event.buf,
+              }
+            end,
           })
         end
 
-        if client and client.supports_method(vim.lsp.protocol.Methods.textDocument_inlayHint) then
+        if client and client:supports_method(vim.lsp.protocol.Methods.textDocument_inlayHint) then
           map('<leader>th', function()
-            vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf })
+            local enabled = vim.lsp.inlay_hint.is_enabled {
+              bufnr = event.buf,
+            }
+
+            vim.lsp.inlay_hint.enable(not enabled, {
+              bufnr = event.buf,
+            })
           end, '[T]oggle Inlay [H]ints')
         end
       end,
@@ -82,7 +110,12 @@ return {
       clangd = {},
 
       html = {
-        filetypes = { 'html', 'twig', 'hbs', 'blade' },
+        filetypes = {
+          'html',
+          'twig',
+          'hbs',
+          'blade',
+        },
       },
 
       cssls = {},
@@ -91,9 +124,25 @@ return {
       -- DevOps
       dockerls = {},
       docker_compose_language_service = {},
+
       terraformls = {
-        filetypes = { 'terraform', 'terraform-vars' },
+        filetypes = {
+          'terraform',
+          'terraform-vars',
+        },
+
+        -- Override the incompatible default on_attach from nvim-lspconfig.
+        on_attach = function(_, bufnr)
+          vim.schedule(function()
+            if vim.api.nvim_buf_is_valid(bufnr) then
+              vim.lsp.codelens.refresh {
+                bufnr = bufnr,
+              }
+            end
+          end)
+        end,
       },
+
       bashls = {},
       ansiblels = {},
       jsonls = {},
@@ -105,6 +154,7 @@ return {
               enable = false,
               url = '',
             },
+
             schemas = require('schemastore').yaml.schemas(),
             validate = true,
             completion = true,
@@ -122,19 +172,26 @@ return {
             completion = {
               callSnippet = 'Replace',
             },
+
             runtime = {
               version = 'LuaJIT',
             },
+
             workspace = {
               checkThirdParty = false,
+
               library = {
                 '${3rd}/luv/library',
                 unpack(vim.api.nvim_get_runtime_file('', true)),
               },
             },
+
             diagnostics = {
-              disable = { 'missing-fields' },
+              disable = {
+                'missing-fields',
+              },
             },
+
             format = {
               enable = false,
             },
@@ -144,7 +201,7 @@ return {
     }
 
     local ensure_installed = {
-      -- LSP
+      -- LSP servers
       'intelephense',
       'ts_ls',
       'pyright',
@@ -163,7 +220,7 @@ return {
       'marksman',
       'lua_ls',
 
-      -- Formatters / linters
+      -- Formatters and linters
       'stylua',
       'blade-formatter',
       'php-cs-fixer',
@@ -180,16 +237,15 @@ return {
       ensure_installed = ensure_installed,
     }
 
+    -- Configure the servers before mason-lspconfig enables them.
+    for server_name, server_config in pairs(servers) do
+      server_config.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server_config.capabilities or {})
+
+      vim.lsp.config(server_name, server_config)
+    end
+
     require('mason-lspconfig').setup {
-      handlers = {
-        function(server_name)
-          local server = servers[server_name] or {}
-
-          server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
-
-          require('lspconfig')[server_name].setup(server)
-        end,
-      },
+      automatic_enable = true,
     }
   end,
 }

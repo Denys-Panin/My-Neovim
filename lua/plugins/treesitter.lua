@@ -1,5 +1,6 @@
 return {
   'nvim-treesitter/nvim-treesitter',
+  branch = 'master',
   build = ':TSUpdate',
   dependencies = {}, -- ВАЖЛИВО: має бути список, навіть якщо порожній
   opts = {
